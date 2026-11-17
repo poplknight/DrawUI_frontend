@@ -57,45 +57,19 @@ This project uses **pnpm**. Always prefer scripts defined in `package.json` (e.g
 
 ## Build, Test, and Development Commands
 
-- `pnpm dev`: Start Vite dev server.
-- `pnpm dev:cloud`: Dev server connected to cloud backend (testcloud.comfy.org)
+- `pnpm dev`: Start Vite dev server. The dev-server proxy targets the backend at `DEV_SERVER_COMFYUI_URL` (default http://127.0.0.1:8188).
 - `pnpm dev:electron`: Dev server with Electron API mocks
 - `pnpm build`: Type-check then production build to `dist/`
 - `pnpm preview`: Preview the production build locally
 - `pnpm test:unit`: Run Vitest unit tests
-- `pnpm test:browser:local`: Run Playwright E2E tests (`browser_tests/`) against ComfyUI on 8188 and `pnpm dev:test` on 5173 (see Agent-only rules)
-- `pnpm comfy-test record`: Interactive test recorder (guided setup for non-devs; **needs a real terminal** — exits immediately with guidance if stdin isn't a TTY)
-- `pnpm comfy-test plan --description "<what to test>" [--tags a,b] [--workflow w] [--name n] [--feature-flags name:value,...]`: **Agent entry point.** Non-interactive, no terminal, no backend/dev-server required — reads the filesystem and prints text only. Validates the tags/workflow and prints a `<test-suite>/<test-name>/<test-file>/<seed-file>/<tag>/<body>` block ready to hand to the `playwright-test-generator` agent below — this is how an agent (not a human) produces a test with `comfy-test`. Example:
-  ```
-  pnpm comfy-test plan --description "collapsing a KSampler node keeps its connections" --tags @canvas,@widget
-  ```
-- `pnpm comfy-test transform <file> [--name <n>] [--tags <a,b>] [--workflow <w>] [--output <f>] [--feature-flags <specs>]`: Transform raw Playwright codegen to conventions. Non-interactive.
-- `pnpm comfy-test pr <file> [description]`: Open a pull request for a generated test. Non-interactive.
-- `pnpm comfy-test check [--distribution cloud|cloud-staging|cloud-prod|local] [--backend <url>]`: Check environment prerequisites
-- `pnpm comfy-test list [--filter <keyword>]`: List available test workflows
-- `pnpm comfy-test tags`: List test tags with their meanings
-- `pnpm comfy-test add-workflow <file> [--name <n>]`: Add and validate a workflow asset from disk
-
-**Agent workflow, end to end:** `comfy-test plan` → hand its output to the `playwright-test-generator` agent (writes a convention-compliant spec directly, no `transform` needed) → `comfy-test pr <file>`.
-
-**A `[WARN] Unsupported engine` line on every `comfy-test` invocation is not a failure** — pnpm warns when the local Node version doesn't match `package.json`'s `engines` field, but the command still runs and exits 0 on success. Don't treat it as a tool failure requiring investigation.
-
-### Playwright Test Agents (`.claude/agents/`)
-
-| Agent                          | Responsibility                                                                                                                    |
-| ------------------------------ | --------------------------------------------------------------------------------------------------------------------------------- |
-| `playwright-test-planner.md`   | Explores the app, identifies testable scenarios, creates structured test plans                                                    |
-| `playwright-test-generator.md` | Generates Playwright test code from plans using ComfyUI fixtures and conventions — this is what `comfy-test plan`'s output is for |
-| `playwright-test-healer.md`    | Diagnoses and fixes failing tests; escalates regressions rather than auto-skipping                                                |
-
-Guardrails: agents must use `comfyPage` fixture (not bare `page`), never add `waitForTimeout()`, never weaken assertions, and reference `.claude/skills/codegen-transform/SKILL.md` for transform rules.
-
 - `pnpm lint` / `pnpm lint:fix`: Lint (ESLint)
 - `pnpm format` / `pnpm format:check`: oxfmt
 - `pnpm typecheck`: Vue TSC type checking
 - `pnpm deps:audit`: Reject production `src/` import cycles, including type-only imports
 - `pnpm audit:inherited-classes [--write]`: Report text color, size, weight and family classes that repeat a value every render context already inherits, following slots and component usages (manual, not a gate)
 - `pnpm storybook`: Start Storybook development server
+
+Browser E2E (`pnpm test:browser`, `browser_tests/`) is available but currently paused: the canvas and fixtures expect a backend on 8188 that implements the object-info / prompt / settings protocol. Wire the Go backend to those endpoints before treating E2E as runnable.
 
 > **`vue-tsc` needs its own `node_modules` in the checkout.** `vue-tsc --noEmit`
 > (what `pnpm typecheck` runs) emits type references as relative paths into
@@ -113,7 +87,7 @@ Guardrails: agents must use `comfyPage` fixture (not bare `page`), never add `wa
 2. Run the tests for what you changed: `pnpm test:unit path/to/file`
 3. Lint what you changed: `pnpm lint:unstaged:fix`
 4. Check if README updates are needed
-5. Suggest docs.comfy.org updates for user-facing changes
+5. Suggest documentation updates for user-facing changes
 
 Do not run repo-wide checks to verify your work: `pnpm lint`, `pnpm typecheck`,
 `pnpm knip`, `pnpm build`, or `pnpm test:unit` without a path. They load every
@@ -182,7 +156,7 @@ CI runs everything.
   - Keep it extremely concise and information-dense
   - Don't use emojis or add excessive headers/sections
   - Follow the PR description template in the `.github/` folder.
-- Quality gates, enforced by the git hooks and CI (see Development Workflow):
+- Quality gates, enforced by the git hooks (see Development Workflow):
   - `pnpm lint`
   - `pnpm typecheck`
   - `pnpm knip`
@@ -210,12 +184,6 @@ CI runs everything.
 
 See `docs/guidance/engineering.md` for the remaining engineering guidelines.
 
-## Design Standards
-
-Before implementing any user-facing feature, consult the [Comfy Design Standards](https://www.figma.com/design/QreIv5htUaSICNuO2VBHw0/Comfy-Design-Standards) Figma file. Use the Figma MCP to fetch it live — the file is the single source of truth and may be updated by designers at any time.
-
-See `docs/guidance/design-standards.md` for Figma file keys, section node IDs, and component references.
-
 ## Testing
 
 - Frameworks: Vitest (unit/component, happy-dom) and Playwright (E2E).
@@ -223,30 +191,8 @@ See `docs/guidance/design-standards.md` for Figma file keys, section node IDs, a
 - Principles: Read `docs/guidance/testing-principles.md` before proposing, reviewing, or writing tests, not only when editing a test file. Start with caller or user expectations and reachable scenarios, then choose the smallest suite that protects them. Use Beck's Test Desiderata to judge behavioral value and refactor resistance.
 - Conventions: `docs/guidance/vitest.md` (unit/component), `docs/guidance/playwright.md` (E2E), and `docs/testing/*.md` for detailed patterns.
 
-## Architecture Decision Records
-
-All architectural decisions are documented in `docs/adr/`. Code changes must be consistent with accepted ADRs. Proposed ADRs indicate design direction and should be treated as guidance. See `.agents/checks/adr-compliance.md` for automated validation rules.
-
-When working from a TDD or design doc, record its tradeoffs, alternatives considered, and rejected options as a new ADR, keeping only the context a future maintainer cannot read off the code, and model its structure on an existing ADR in `docs/adr/`.
-
-ADR files are named `<DOMAIN>[-<SUBDOMAIN>]-<NNNN>-descriptive-title.md`: at most two tags ordered broad-to-narrow, the first naming the subsystem that owns the invariant, then the next unused four-digit sequence number. Each ADR opens with `# ADR-<IDENTIFIER>: Title`, a `Date: YYYY-MM-DD` line, and a `## Status` section (`Proposed`, `Accepted`, `Rejected`, `Deprecated`, or `Superseded`). `pnpm adr:check` enforces the filename, heading, date, status, and identifier uniqueness. There is no index file; list the directory to find ADRs.
-
-### Entity Architecture Constraints (ADR-CRDT-LAYOUT-0003 + ADR-ECS-0008)
-
-1. **Command pattern for durable layout mutations**: Persistent node, group, and reroute geometry changes must flow through serializable `LayoutOperation` objects rather than direct property access. Transient renderer measurements remain outside that command stream. Do not generalize layout command coverage to all ECS mutations; non-layout stores currently expose direct actions, and graph operations still coordinate imperative class callbacks.
-2. **Dedicated stores over instance state**: Entity data lives in dedicated Pinia stores keyed by each concern's established ID type. Most entity IDs are branded numbers; node IDs may be numbers or strings, graph IDs are UUID strings, and scoped concerns may use composite string keys such as `WidgetId` (`graphId:nodeId:name`, see `src/types/widgetId.ts`). Prefer a focused store to a single unified registry. Do not add new instance properties/methods to entity classes for data that belongs in a store. Do not use OOP inheritance for entity modeling.
-3. **No god-object growth**: Do not add methods to `LGraphNode`, `LGraphCanvas`, `LGraph`, or `Subgraph`. Extract to systems, stores, or composables.
-4. **Plain data components**: ECS components are plain data objects — no methods, no back-references to parent entities. Behavior belongs in systems (pure functions).
-5. **Extension ecosystem impact**: Changes to entity callbacks (`onConnectionsChange`, `onRemoved`, `onAdded`, `onConnectInput/Output`, `onConfigure`, `onWidgetChanged`), `node.widgets` access, `node.serialize`, or `graph._version++` affect 40+ custom node repos and require migration guidance.
-
 ## Common Pitfalls
 
-- NEVER derive a server fact on the client: a gate renders one fact from the
-  API as received, without combining it with role, tier, plan state, seats or
-  `isCloud`. Local UI state (loading, in-flight, form validity) may only
-  disable the control, never grant it. A missing fact is a backend ticket plus
-  `pendingServerFact('BE-xxxx', expr)`, never another field. See
-  `docs/adr/API-SERVER-FACTS-0042-server-facts-are-rendered-not-derived.md`
 - NEVER use `any` type - use proper TypeScript types
 - NEVER use `as any` type assertions - fix the underlying type issue
 - NEVER add `@ts-ignore` or `@ts-nocheck`. Use `@ts-expect-error` only in a test
@@ -320,15 +266,6 @@ ADR files are named `<DOMAIN>[-<SUBDOMAIN>]-<NNNN>-descriptive-title.md`: at mos
 ## Agent-only rules
 
 Rules for agent-based coding tasks.
-
-### Playwright E2E availability
-
-Treat E2E as runnable. Start the backend and dev server per
-[Setup](browser_tests/README.md#setup), or the declared services in a
-[remote agent container](browser_tests/README.md#remote-agent-containers), then
-run the [readiness checks](browser_tests/README.md#running-tests). Report E2E as
-blocked, in a summary or a subagent brief, only with the failing check's command
-and output.
 
 ### PR Review Comment Resolution
 

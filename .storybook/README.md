@@ -1,4 +1,4 @@
-# Storybook Configuration for ComfyUI Frontend
+# Storybook Configuration
 
 ## What is Storybook?
 
@@ -85,16 +85,15 @@ export const WithVariant: Story = {
 ### Available Features
 
 - **Vue 3 Support**: Full Vue 3 composition API and reactivity
-- **ComfyUI Theming**: Design-system tokens and dark/light themes applied
+- **Design-system theming**: Tokens and dark/light themes applied
 - **Pinia Stores**: Access to application stores for components that need state
 - **TypeScript**: Full TypeScript support with proper type checking
 - **CSS/SCSS**: Component styling support
 - **Auto-documentation**: Automatic prop tables and component documentation
-- **Chromatic Integration**: Automated visual regression testing for component stories
 
 ## Development Tips
 
-## ComfyUI Storybook Guidelines
+## Storybook Guidelines
 
 ### Scope – When to Create Stories
 
@@ -178,34 +177,10 @@ export const WithLongText: Story = {
 - **`manager.ts`**: Storybook UI customization (if needed)
 - **`preview-head.html`**: Injects custom HTML into the `<head>` of every Storybook iframe (used for global styles, fonts, or fixes for iframe-specific issues)
 
-## Chromatic Visual Testing
-
-This project uses [Chromatic](https://chromatic.com) for automated visual regression testing of Storybook components.
-
-### How It Works
-
-- **When it runs**: `version-bump-*` release branches and manual `workflow_dispatch` (`.github/workflows/ci-tests-storybook.yaml`). Ordinary PRs build Storybook and deploy a Cloudflare preview; they do not snapshot.
-- **What it snapshots**: every story export (`onlyChanged: true` limits a build to stories affected by the diff). Each export is a recurring snapshot.
-- **Baseline Management**: Changes on `main` branch are automatically accepted as new baselines
-
-### Viewing Results
-
-1. Check the GitHub Actions tab for Chromatic workflow status
-2. Click on the Chromatic build link in PR comments to review visual changes
-3. Accept or reject visual changes directly in the Chromatic UI
-
-### Best Practices for Visual Testing
-
-- **Consistent Stories**: Ensure stories render consistently across different environments
-- **Meaningful Names**: Use descriptive story names that clearly indicate the component state
-- **Edge Cases**: Include stories for loading, error, and empty states
-- **Realistic Data**: Use data that closely resembles production usage
-
-## Integration with ComfyUI
+## Project Integration
 
 This Storybook setup includes:
 
-- ComfyUI-specific theming and styling
 - Pre-configured Pinia stores for state management
 - Internationalization (i18n) support
 - Proper alias resolution for `@/` imports
