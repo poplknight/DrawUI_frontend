@@ -90,10 +90,10 @@ Browser E2E (`pnpm test:browser`, `browser_tests/`) is available but currently p
 5. Suggest documentation updates for user-facing changes
 
 Do not run repo-wide checks to verify your work: `pnpm lint`, `pnpm typecheck`,
-`pnpm knip`, `pnpm build`, or `pnpm test:unit` without a path. They load every
-core, and chained together they take minutes. The pre-commit hook already
-formats, lints, and typechecks what you stage, the pre-push hook runs knip, and
-CI runs everything.
+`pnpm build`, or `pnpm test:unit` without a path. They load every core, and
+chained together they take minutes. The pre-commit hook already formats, lints,
+and typechecks what you stage, the pre-push hook runs the dependency and fallow
+audits.
 
 ## Git Conventions
 
@@ -159,7 +159,6 @@ CI runs everything.
 - Quality gates, enforced by the git hooks (see Development Workflow):
   - `pnpm lint`
   - `pnpm typecheck`
-  - `pnpm knip`
   - Relevant tests must pass
 - Never use `--no-verify` to bypass failing tests
   - Identify the issue and present root cause analysis and possible solutions if you are unable to solve quickly yourself
