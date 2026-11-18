@@ -1,10 +1,10 @@
 <template>
   <SidebarTabTemplate :title="$t('sideToolbar.nodes')">
     <template #header>
-      <div class="overflow-x-auto px-4 pt-2 pb-px">
-        <TabList v-model="selectedTab">
-          <Tab v-for="{ value, label } in tabs" :key="value" :value>
-            {{ label }}
+      <div v-if="groups.length" class="overflow-x-auto px-4 pt-2 pb-px">
+        <TabList v-model="selectedGroup">
+          <Tab v-for="group in groups" :key="group.id" :value="group.id">
+            {{ group.label }}
           </Tab>
         </TabList>
       </div>
@@ -17,33 +17,9 @@
             $t('g.searchPlaceholder', { subject: $t('g.nodes') })
           "
           :placeholder="$t('g.searchPlaceholder', { subject: $t('g.nodes') })"
-          @search="handleSearch"
         />
         <template #actions>
-          <FilterDropdown
-            v-if="selectedTab === 'essentials'"
-            v-model="essentialsFilters"
-            :filter-labels="essentialsFilterLabels"
-          />
-          <FilterDropdown
-            v-else
-            v-model="nodeFilters"
-            :filter-labels="nodeFilterLabels"
-          />
-          <Menu
-            v-if="selectedTab === 'essentials'"
-            :items="jumpMenuEntries"
-            :label="$t('essentials.jumpTo')"
-          >
-            <template #trigger>
-              <Button
-                size="icon"
-                :aria-label="$t('essentials.jumpTo')"
-                icon="icon-[lucide--list-tree]"
-              />
-            </template>
-          </Menu>
-          <Menu v-else>
+          <Menu>
             <template #trigger>
               <Button
                 size="icon"
@@ -57,42 +33,40 @@
       </SidebarTopArea>
     </template>
     <template #body>
-      <div class="flex h-full flex-col">
+      <div
+        data-testid="node-group-list"
+        class="scrollbar-custom h-full min-h-0 flex-1 overflow-y-auto pb-2"
+      >
         <div
-          ref="scrollContainerRef"
-          class="scrollbar-custom min-h-0 flex-1 scrollbar-gutter-stable overscroll-none pb-2"
+          v-if="hasNoMatches"
+          class="flex min-h-0 flex-1 items-center justify-center px-6 py-8 text-center text-sm text-muted-foreground"
         >
-          <TabPanel
-            v-if="flags.nodeLibraryEssentialsEnabled"
-            :model-value="selectedTab"
-            value="essentials"
-          >
-            <EssentialNodesPanel
-              :media-filters="essentialsFilters"
-              :search-query
-            />
-          </TabPanel>
-          <TabPanel :model-value="selectedTab" value="all">
-            <div
-              v-if="hasNoMatches"
-              class="flex min-h-0 flex-1 items-center justify-center px-6 py-8 text-center text-sm text-muted-foreground"
-            >
-              {{
-                $t('sideToolbar.nodeLibraryTab.noMatchingNodes', {
-                  query: searchQuery
-                })
-              }}
-            </div>
-            <AllNodesPanel
-              v-else
-              v-model:expanded-keys="expandedKeys"
-              :sections="renderedSections"
-              :fill-node-info="fillNodeInfo"
-              :sort-order="sortOrder"
-              @node-click="handleNodeClick"
-            />
-          </TabPanel>
+          {{
+            $t('sideToolbar.nodeLibraryTab.noMatchingNodes', {
+              query: searchQuery
+            })
+          }}
         </div>
+        <template v-else>
+          <section v-for="section in selectedSections" :key="section.id">
+            <div class="flex items-center gap-3 px-4 pt-3 pb-1">
+              <span class="shrink-0 text-xs text-muted-foreground">
+                {{ section.label }}
+              </span>
+              <div class="h-px min-w-0 flex-1 bg-border/50" />
+            </div>
+            <button
+              v-for="node in section.nodes"
+              :key="`${section.id}/${node.name}`"
+              type="button"
+              class="flex h-9 w-full items-center gap-2 px-4 text-left text-sm hover:bg-secondary"
+              @click="startDrag(node)"
+            >
+              <i class="icon-[comfy--node] size-4 shrink-0" />
+              <span class="truncate">{{ node.display_name }}</span>
+            </button>
+          </section>
+        </template>
       </div>
     </template>
   </SidebarTabTemplate>
@@ -100,127 +74,47 @@
 
 <script setup lang="ts">
 import { useLocalStorage } from '@vueuse/core'
-import { mapValues } from 'es-toolkit'
-import type { MenuItem } from '@comfyorg/design-system/lib/menu/types'
-import {
-  computed,
-  nextTick,
-  onMounted,
-  ref,
-  useTemplateRef,
-  watchEffect
-} from 'vue'
+import { computed, onMounted, ref, useTemplateRef, watchEffect } from 'vue'
 import { useI18n } from 'vue-i18n'
 
-import FilterDropdown from '@/components/common/FilterDropdown.vue'
 import Tab from '@comfyorg/design-system/tab/Tab'
 import TabList from '@comfyorg/design-system/tab/TabList'
-import TabPanel from '@comfyorg/design-system/tab/TabPanel'
 import SearchInput from '@comfyorg/design-system/search-input/SearchInput'
 import Button from '@comfyorg/design-system/button/Button'
 import Menu from '@comfyorg/design-system/menu/Menu'
 import MenuRadioGroup from '@comfyorg/design-system/menu/MenuRadioGroup'
-import { useFeatureFlags } from '@/composables/useFeatureFlags'
 import { useNodeDragToCanvas } from '@/composables/node/useNodeDragToCanvas'
-import { usePerTabState } from '@/composables/usePerTabState'
-import { ESSENTIAL_SECTIONS } from '@/constants/essentialsNodes'
 import { useSearchQueryTracking } from '@/platform/telemetry/searchQuery/useSearchQueryTracking'
-import {
-  DEFAULT_SORTING_ID,
-  DEFAULT_TAB_ID,
-  nodeOrganizationService
-} from '@/services/nodeOrganizationService'
-import type { ComfyNodeDefImpl } from '@/core/graph/nodeDef/ComfyNodeDefImpl'
-import { buildNodeDefTree, useNodeDefStore } from '@/stores/nodeDefStore'
-import type {
-  NodeCategoryId,
-  NodeLibrarySection,
-  NodeSection,
-  SortingStrategyId,
-  TabId
-} from '@/types/nodeOrganizationTypes'
-import type {
-  RenderedTreeExplorerNode,
-  TreeNode
-} from '@/types/treeExplorerTypes'
-import { getProviderIcon } from '@/utils/categoryUtil'
-import { flattenTree, sortedTree, unwrapTreeRoot } from '@/utils/treeUtil'
+import { organizeNodeGroups } from '@/services/nodeLibraryGroups'
+import { useNodeDefStore } from '@/stores/nodeDefStore'
 
-import AllNodesPanel from './nodeLibrary/AllNodesPanel.vue'
-import EssentialNodesPanel from './nodeLibrary/EssentialNodesPanel.vue'
 import SidebarTabTemplate from './SidebarTabTemplate.vue'
 import SidebarTopArea from '@comfyorg/design-system/navigation/SidebarTopArea'
 
-const { flags } = useFeatureFlags()
-
-const scrollContainerRef = useTemplateRef('scrollContainerRef')
-
-const selectedTab = useLocalStorage<TabId>(
-  'Comfy.NodeLibrary.Tab',
-  DEFAULT_TAB_ID
-)
-
-watchEffect(() => {
-  if (selectedTab.value === 'blueprints') selectedTab.value = DEFAULT_TAB_ID
-  if (
-    !flags.nodeLibraryEssentialsEnabled &&
-    selectedTab.value === 'essentials'
-  ) {
-    selectedTab.value = DEFAULT_TAB_ID
-  }
-})
-
-const sortOrderByTab = useLocalStorage<Record<TabId, SortingStrategyId>>(
-  'Comfy.NodeLibrary.SortByTab',
-  {
-    essentials: DEFAULT_SORTING_ID,
-    all: DEFAULT_SORTING_ID,
-    blueprints: 'alphabetical'
-  }
-)
-const sortOrder = usePerTabState(selectedTab, sortOrderByTab)
-
-const sortingOptions = computed(() =>
-  nodeOrganizationService.getSortingStrategies().map((strategy) => ({
-    value: strategy.id,
-    label: t(strategy.label)
-  }))
-)
-
-const nodeFilterLabels: Record<NodeCategoryId, string> = {
-  blueprints: 'sideToolbar.nodeLibraryTab.filterOptions.blueprints',
-  comfyNodes: 'sideToolbar.nodeLibraryTab.filterOptions.comfyNodes',
-  partnerNodes: 'sideToolbar.nodeLibraryTab.filterOptions.partnerNodes',
-  extensions: 'sideToolbar.nodeLibraryTab.filterOptions.extensions'
-} as const
-const nodeFilters = ref(mapValues(nodeFilterLabels, () => true))
-const essentialsFilterLabels = {
-  image: 'sideToolbar.mediaAssets.filterImage',
-  video: 'sideToolbar.mediaAssets.filterVideo',
-  text: 'sideToolbar.mediaAssets.filterText',
-  audio: 'sideToolbar.mediaAssets.filterAudio',
-  '3d': 'sideToolbar.mediaAssets.filter3D'
-} as const
-const essentialsFilters = ref(mapValues(essentialsFilterLabels, () => true))
-
 const { t } = useI18n()
+const selectedGroup = useLocalStorage('Comfy.NodeLibrary.Group', '')
+const sortOrder = useLocalStorage<'original' | 'alphabetical'>(
+  'Comfy.NodeLibrary.Sort',
+  'original'
+)
+const sortingOptions = computed(() => [
+  {
+    value: 'original' as const,
+    label: t('sideToolbar.nodeLibraryTab.sortBy.original')
+  },
+  {
+    value: 'alphabetical' as const,
+    label: t('sideToolbar.nodeLibraryTab.sortBy.alphabetical')
+  }
+])
 
 const searchBoxRef = useTemplateRef('searchBoxRef')
 const searchQuery = ref('')
-const expandedKeysByTab = ref<Record<TabId, string[]>>({
-  essentials: [],
-  all: [],
-  blueprints: []
-})
-const expandedKeys = usePerTabState(selectedTab, expandedKeysByTab)
-
 const nodeDefStore = useNodeDefStore()
 const { startDrag } = useNodeDragToCanvas()
 
 const filteredNodeDefs = computed(() => {
-  if (searchQuery.value.length === 0) {
-    return []
-  }
+  if (searchQuery.value.length === 0) return []
   return nodeDefStore.nodeSearchService.searchNode(
     searchQuery.value,
     [],
@@ -241,195 +135,27 @@ const hasNoMatches = computed(
   () => searchQuery.value.length > 0 && filteredNodeDefs.value.length === 0
 )
 
-const sections = computed(() => {
-  return nodeOrganizationService.organizeNodesTab(activeNodes.value)
-})
-
-function getFolderIcon(node: TreeNode<ComfyNodeDefImpl>): string {
-  const firstLeaf = findFirstLeaf(node)
-  if (
-    firstLeaf?.data?.api_node &&
-    firstLeaf.key?.replace(`${node.key}/`, '') === firstLeaf.label
-  ) {
-    return getProviderIcon(node.label ?? '')
-  }
-  return 'icon-[lucide--folder]'
-}
-
-function findFirstLeaf(
-  node: TreeNode<ComfyNodeDefImpl>
-): TreeNode<ComfyNodeDefImpl> | undefined {
-  if (node.leaf) return node
-  for (const child of node.children ?? []) {
-    const leaf = findFirstLeaf(child)
-    if (leaf) return leaf
-  }
-  return undefined
-}
-
-function fillNodeInfo(
-  node: TreeNode<ComfyNodeDefImpl>
-): RenderedTreeExplorerNode<ComfyNodeDefImpl> {
-  const children = node.children?.map(fillNodeInfo)
-  const totalLeaves = node.leaf
-    ? 1
-    : (children?.reduce((acc, child) => acc + child.totalLeaves, 0) ?? 0)
-
-  return {
-    key: node.key,
-    label: node.leaf ? (node.data?.display_name ?? node.label) : node.label,
-    leaf: node.leaf,
-    data: node.data,
-    icon: node.leaf ? 'icon-[comfy--node]' : getFolderIcon(node),
-    type: node.leaf ? 'node' : 'folder',
-    totalLeaves,
-    children
-  }
-}
-
-function applySorting(
-  tree: TreeNode<ComfyNodeDefImpl>
-): TreeNode<ComfyNodeDefImpl> {
-  if (sortOrder.value === 'alphabetical') {
-    return sortedTree(tree, { groupLeaf: true })
-  }
-  return tree
-}
-
-function renderSections(
-  nodeSections: NodeSection[],
-  filter?: (section: NodeSection) => boolean
-): NodeLibrarySection<ComfyNodeDefImpl>[] {
-  const filtered = filter ? nodeSections.filter(filter) : nodeSections
-
-  if (sortOrder.value === 'alphabetical') {
-    const allNodes = filtered.flatMap((section) =>
-      flattenTree<ComfyNodeDefImpl>(section.tree)
-    )
-    const mergedTree = unwrapTreeRoot(buildNodeDefTree(allNodes))
-    return [{ root: fillNodeInfo(applySorting(mergedTree)) }]
-  }
-
-  return filtered.map((section) => ({
-    category: section.category,
-    title: section.title,
-    root: fillNodeInfo(applySorting(section.tree))
-  }))
-}
-
-const renderedSections = computed(() =>
-  renderSections(
-    sections.value,
-    (section) => !section.category || nodeFilters.value[section.category]
+const groups = computed(() =>
+  organizeNodeGroups(
+    activeNodes.value,
+    t('sideToolbar.nodeLibraryTab.other'),
+    t('sideToolbar.nodeLibraryTab.allNodes'),
+    sortOrder.value === 'alphabetical'
+      ? (a, b) => a.display_name.localeCompare(b.display_name)
+      : undefined
   )
 )
 
-function collectFolderKeys(node: TreeNode<ComfyNodeDefImpl>): string[] {
-  if (node.leaf) return []
-  const keys = [node.key]
-  for (const child of node.children ?? []) {
-    keys.push(...collectFolderKeys(child))
-  }
-  return keys
-}
-
-function handleNodeClick(node: RenderedTreeExplorerNode<ComfyNodeDefImpl>) {
-  if (node.type === 'node' && node.data) {
-    startDrag(node.data)
-  }
-}
-
-async function handleSearch() {
-  await nextTick()
-
-  if (selectedTab.value === 'essentials') return
-
-  if (filteredNodeDefs.value.length === 0) {
-    expandedKeys.value = []
-    return
-  }
-
-  const allKeys: string[] = []
-  for (const section of sections.value) {
-    allKeys.push(...collectFolderKeys(section.tree))
-  }
-  expandedKeys.value = allKeys
-}
-
-function smoothScrollTo(
-  container: HTMLElement,
-  target: number,
-  duration = 300
-) {
-  const start = container.scrollTop
-  const distance = target - start
-  if (Math.abs(distance) < 1) return
-  const startTime = performance.now()
-  function step(now: number) {
-    const elapsed = now - startTime
-    const progress = Math.min(elapsed / duration, 1)
-    const eased = 1 - Math.pow(1 - progress, 3)
-    container.scrollTop = start + distance * eased
-    if (progress < 1) requestAnimationFrame(step)
-  }
-  requestAnimationFrame(step)
-}
-
-async function scrollToId(id: string, marginTop = 0) {
-  await nextTick()
-  const container = scrollContainerRef.value
-  const el = document.getElementById(id)
-  if (!container || !el) return
-  const top =
-    el.getBoundingClientRect().top -
-    container.getBoundingClientRect().top +
-    container.scrollTop -
-    marginTop
-  smoothScrollTo(container, top)
-}
-
-const STICKY_SECTION_HEADER_HEIGHT = 56
-async function jumpToSection(sectionKey: string) {
-  await scrollToId(`essentials-section-${sectionKey}`)
-}
-
-async function jumpToSubgroup(subgroupKey: string) {
-  await scrollToId(
-    `essentials-subgroup-${subgroupKey}`,
-    STICKY_SECTION_HEADER_HEIGHT
-  )
-}
-
-const jumpMenuEntries = computed<MenuItem[]>(() => {
-  return ESSENTIAL_SECTIONS.map((section) => {
-    if (!section.subgroups)
-      return {
-        label: t(`essentials.${section.key}`),
-        command: () => jumpToSection(section.key)
-      }
-
-    const items = section.subgroups.map((subgroup) => ({
-      label: t(`essentials.${subgroup.key}`),
-      command: () => jumpToSubgroup(subgroup.key)
-    }))
-    return { label: t(`essentials.${section.key}`), items }
-  })
+watchEffect(() => {
+  if (groups.value.some((group) => group.id === selectedGroup.value)) return
+  selectedGroup.value = groups.value[0]?.id ?? ''
 })
 
-const tabs = computed<Array<{ value: TabId; label: string }>>(() => {
-  const allNodesTab = {
-    value: 'all',
-    label: t('sideToolbar.nodeLibraryTab.allNodes')
-  } as const
-  if (!flags.nodeLibraryEssentialsEnabled) return [allNodesTab]
-  return [
-    {
-      value: 'essentials',
-      label: t('sideToolbar.nodeLibraryTab.essentials')
-    },
-    allNodesTab
-  ]
-})
+const selectedSections = computed(
+  () =>
+    groups.value.find((group) => group.id === selectedGroup.value)?.sections ??
+    []
+)
 
 onMounted(() => {
   searchBoxRef.value?.focus()

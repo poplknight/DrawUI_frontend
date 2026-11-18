@@ -2,14 +2,12 @@ import { render, screen, waitFor } from '@testing-library/vue'
 import userEvent from '@testing-library/user-event'
 import { fromPartial } from '@total-typescript/shoehorn'
 import { TabsTrigger } from 'reka-ui'
-import { beforeEach, describe, expect, it, onTestFinished, vi } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Mock } from 'vitest'
 import type { PropType } from 'vue'
 import { computed, defineComponent, h, nextTick } from 'vue'
 import { createI18n } from 'vue-i18n'
 
-import { useCurrentUser } from '@/composables/auth/useCurrentUser'
-import { remoteConfig } from '@/platform/remoteConfig/remoteConfig'
 import { useWorkflowService } from '@/platform/workflow/core/services/workflowService'
 import enMessages from '@/locales/en/main.json' with { type: 'json' }
 import { useSettingStore } from '@/platform/settings/settingStore'
@@ -50,8 +48,6 @@ vi.mock(import('@/platform/distribution/types'), () => ({
     return distribution.isNightly
   }
 }))
-
-vi.mock(import('@/composables/auth/useCurrentUser'))
 
 const openFeedbackDialog = vi.hoisted(() => vi.fn())
 vi.mock(import('@/platform/support/feedbackDialog'), () => ({
@@ -227,53 +223,11 @@ describe('WorkflowTabs feedback button', () => {
 })
 
 describe('WorkflowTabs profile button', () => {
-  beforeEach(() => {
-    useCurrentUser().isLoggedIn = computed(() => true)
-  })
-
-  function setBillingNewUx(enabled: boolean) {
-    const previous = remoteConfig.value
-    remoteConfig.value = { ...previous, billing_new_ux_enabled: enabled }
-    onTestFinished(() => {
-      remoteConfig.value = previous
-    })
-  }
-
-  it('keeps the profile button in the top bar while billing_new_ux_enabled is off', () => {
-    setBillingNewUx(false)
-    renderComponent()
-
-    expect(screen.getByTestId('current-user-button')).toBeInTheDocument()
-    expect(screen.queryByTestId('login-button')).not.toBeInTheDocument()
-  })
-
-  it('moves the profile button out of the top bar while billing_new_ux_enabled is on', () => {
-    setBillingNewUx(true)
+  it('does not show the login or profile button in the top bar', () => {
     renderComponent()
 
     expect(screen.queryByTestId('current-user-button')).not.toBeInTheDocument()
     expect(screen.queryByTestId('login-button')).not.toBeInTheDocument()
-  })
-
-  it('keeps the profile button in the top bar in builder mode, where the sidebar is hidden', async () => {
-    setBillingNewUx(true)
-    const workflowStore = useWorkflowStore()
-    const workflow = await workflowStore
-      .createTemporary('Builder workflow.json')
-      .load()
-    workflow.activeMode = 'builder:inputs'
-    workflowStore.activeWorkflow = workflow
-    renderComponent()
-
-    expect(screen.getByTestId('current-user-button')).toBeInTheDocument()
-  })
-
-  it('keeps the login button in the top bar when signed out with billing_new_ux_enabled on', () => {
-    setBillingNewUx(true)
-    useCurrentUser().isLoggedIn = computed(() => false)
-    renderComponent()
-
-    expect(screen.getByTestId('login-button')).toBeInTheDocument()
   })
 })
 

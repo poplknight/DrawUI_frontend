@@ -1,28 +1,28 @@
 # Setup Repository
 
-Bootstrap the ComfyUI Frontend monorepo with all necessary dependencies and verification checks.
+Bootstrap the project dependencies and verify the toolchain.
 
 ## Overview
 
 This command will:
 
-1. Run `.agents/setup` to install the pinned Node.js/pnpm toolchain, dependencies, and Playwright Chromium
+1. Install dependencies with `pnpm install` (Node.js version from `.nvmrc`, pnpm from `package.json#packageManager`)
 2. Verify the project builds successfully
 3. Run unit tests to ensure functionality
 4. Start development server to verify frontend boots correctly
 
-## Step 1: Bootstrap Environment
+## Step 1: Install Dependencies
 
-The `.agents/setup` script handles the full toolchain setup — Node.js from `.nvmrc`, pnpm from `package.json#packageManager`, workspace dependencies, and Playwright Chromium:
+Ensure the Node.js version from `.nvmrc` is active (use `nvm use` or your version manager), then install workspace dependencies:
 
 ```bash
-source .agents/setup
+pnpm install
 ```
 
-For fast verification that the toolchain is already in place (e.g. after an environment restart), use the readiness check instead:
+If Playwright Chromium is needed for browser tooling, install it afterwards:
 
 ```bash
-source .agents/resume
+pnpm exec playwright install --with-deps chromium
 ```
 
 ## Step 2: Verify Build

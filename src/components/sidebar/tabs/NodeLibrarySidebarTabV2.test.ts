@@ -22,31 +22,6 @@ vi.mock(import('@vueuse/core'), { spy: true })
 
 vi.mock(import('@/composables/node/useNodeDragToCanvas'))
 
-vi.mock<unknown>(import('@/services/nodeOrganizationService'), () => ({
-  DEFAULT_TAB_ID: 'essentials',
-  DEFAULT_SORTING_ID: 'alphabetical',
-  nodeOrganizationService: {
-    organizeNodesTab: vi.fn(() => []),
-    getSortingStrategies: vi.fn(() => [])
-  }
-}))
-
-vi.mock<unknown>(import('./nodeLibrary/AllNodesPanel.vue'), () => ({
-  default: {
-    name: 'AllNodesPanel',
-    template: '<div data-testid="all-panel"><slot /></div>',
-    props: ['sections', 'expandedKeys', 'fillNodeInfo']
-  }
-}))
-
-vi.mock<unknown>(import('./nodeLibrary/EssentialNodesPanel.vue'), () => ({
-  default: {
-    name: 'EssentialNodesPanel',
-    template: '<div data-testid="essential-panel"><slot /></div>',
-    props: ['root', 'expandedKeys', 'flatNodes']
-  }
-}))
-
 const i18n = createI18n({
   legacy: false,
   locale: 'en',
@@ -54,7 +29,8 @@ const i18n = createI18n({
     en: {
       sideToolbar: {
         nodeLibraryTab: {
-          noMatchingNodes: 'No nodes match "{query}"'
+          noMatchingNodes: 'No nodes match "{query}"',
+          other: 'Other'
         }
       }
     }
@@ -80,19 +56,11 @@ describe('NodeLibrarySidebarTabV2', () => {
     })
   }
 
-  it('should render with tabs', () => {
+  it('shows the node list without the essentials tab', () => {
     renderComponent()
 
-    const triggers = screen.getAllByRole('tab')
-    expect(triggers).toHaveLength(2)
-  })
-
-  it('should render only the selected panel', () => {
-    renderComponent()
-
-    expect(screen.getByTestId('essential-panel')).toBeInTheDocument()
-    expect(screen.queryByTestId('all-panel')).not.toBeInTheDocument()
-    expect(screen.queryByTestId('blueprints-panel')).not.toBeInTheDocument()
+    expect(screen.queryByRole('tab')).not.toBeInTheDocument()
+    expect(screen.getByTestId('node-group-list')).toBeInTheDocument()
   })
 
   describe('search empty state', () => {
@@ -100,7 +68,7 @@ describe('NodeLibrarySidebarTabV2', () => {
       renderComponent()
 
       expect(screen.queryByText(/No nodes match/)).not.toBeInTheDocument()
-      expect(screen.getByTestId('essential-panel')).toBeInTheDocument()
+      expect(screen.getByTestId('node-group-list')).toBeInTheDocument()
     })
 
     it('renders the empty state with the query when search has no matches', async () => {
@@ -108,12 +76,9 @@ describe('NodeLibrarySidebarTabV2', () => {
       hoisted.mockSearchNode.mockReturnValue([])
       renderComponent()
 
-      const [, allTab] = screen.getAllByRole('tab')
-      await user.click(allTab)
       await user.type(screen.getByRole('combobox'), 'gibberish')
 
       expect(screen.getByText('No nodes match "gibberish"')).toBeInTheDocument()
-      expect(screen.queryByTestId('all-panel')).not.toBeInTheDocument()
     })
 
     it('hides the empty state when the search has matches', async () => {
@@ -124,16 +89,13 @@ describe('NodeLibrarySidebarTabV2', () => {
       await user.type(screen.getByRole('combobox'), 'ksampler')
 
       expect(screen.queryByText(/No nodes match/)).not.toBeInTheDocument()
-      expect(screen.getByTestId('essential-panel')).toBeInTheDocument()
+      expect(screen.getByTestId('node-group-list')).toBeInTheDocument()
     })
 
     it('hides the empty state once the query is cleared', async () => {
       const user = userEvent.setup()
       hoisted.mockSearchNode.mockReturnValue([])
       renderComponent()
-
-      const [, allTab] = screen.getAllByRole('tab')
-      await user.click(allTab)
 
       const input = screen.getByRole('combobox')
       await user.type(input, 'gibberish')
@@ -142,7 +104,7 @@ describe('NodeLibrarySidebarTabV2', () => {
       await user.clear(input)
 
       expect(screen.queryByText(/No nodes match/)).not.toBeInTheDocument()
-      expect(screen.getByTestId('all-panel')).toBeInTheDocument()
+      expect(screen.getByTestId('node-group-list')).toBeInTheDocument()
     })
   })
 })

@@ -1047,6 +1047,7 @@
         "alphabeticalDesc": "Sort alphabetically within groups"
       },
       "noMatchingNodes": "No nodes match \"{query}\"",
+      "other": "Other",
       "sections": {
         "favorites": "Bookmarks",
         "favoriteNode": "Bookmark Node",

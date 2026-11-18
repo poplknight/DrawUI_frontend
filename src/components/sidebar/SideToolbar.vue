@@ -52,7 +52,6 @@
 
       <div ref="bottomToolbarRef" :class="cn('mt-auto', groupClasses)">
         <SidebarLogoutIcon v-if="userStore.isMultiUserServer" :is-small />
-        <SidebarHelpCenterIcon :is-small />
         <SidebarBottomPanelToggleButton
           v-if="!isCloud && !hideWorkspaceToggles"
           :is-small
@@ -67,7 +66,6 @@
         />
       </div>
     </div>
-    <HelpCenterPopups :is-small />
     <Suspense v-if="NightlySurveyController">
       <component :is="NightlySurveyController" />
     </Suspense>
@@ -88,7 +86,6 @@ import {
 } from 'vue'
 import { useI18n } from 'vue-i18n'
 
-import HelpCenterPopups from '@/components/helpcenter/HelpCenterPopups.vue'
 import ComfyMenuButton from '@/components/sidebar/ComfyMenuButton.vue'
 import SidebarBottomPanelToggleButton from '@/components/sidebar/SidebarBottomPanelToggleButton.vue'
 import SidebarSettingsButton from '@/components/sidebar/SidebarSettingsButton.vue'
@@ -107,7 +104,6 @@ import { useWorkspaceStore } from '@/stores/workspaceStore'
 import type { SidebarTabExtension } from '@/types/extensionTypes'
 import { cn } from '@comfyorg/tailwind-utils'
 
-import SidebarHelpCenterIcon from './SidebarHelpCenterIcon.vue'
 import SidebarExtensionTabButton from './SidebarExtensionTabButton.vue'
 import SidebarLogoutIcon from './SidebarLogoutIcon.vue'
 import SidebarTemplatesButton from './SidebarTemplatesButton.vue'

@@ -91,9 +91,8 @@ Browser E2E (`pnpm test:browser`, `browser_tests/`) is available but currently p
 
 Do not run repo-wide checks to verify your work: `pnpm lint`, `pnpm typecheck`,
 `pnpm build`, or `pnpm test:unit` without a path. They load every core, and
-chained together they take minutes. The pre-commit hook already formats, lints,
-and typechecks what you stage, the pre-push hook runs the dependency and fallow
-audits.
+chained together they take minutes. There are no git hooks; run the targeted
+commands for what you changed yourself.
 
 ## Git Conventions
 
@@ -156,12 +155,7 @@ audits.
   - Keep it extremely concise and information-dense
   - Don't use emojis or add excessive headers/sections
   - Follow the PR description template in the `.github/` folder.
-- Quality gates, enforced by the git hooks (see Development Workflow):
-  - `pnpm lint`
-  - `pnpm typecheck`
-  - Relevant tests must pass
-- Never use `--no-verify` to bypass failing tests
-  - Identify the issue and present root cause analysis and possible solutions if you are unable to solve quickly yourself
+- Run `pnpm lint`, `pnpm typecheck`, and the relevant tests on your change before pushing. If a check fails, identify the root cause and fix it rather than silencing it.
 - Keep PRs focused and small
   - If it looks like the current changes will have 300+ lines of non-test code, suggest ways it could be broken into multiple PRs
 
@@ -219,7 +213,7 @@ See `docs/guidance/engineering.md` for the remaining engineering guidelines.
     rationale, list the alternatives, or repeat what the name and type already
     say. Longer JSDoc is a violation.
   - Tool directives (`eslint-disable-next-line`, `@ts-expect-error`,
-    `fallow-ignore`, `@vitest-environment`) are machine instructions, and the
+    `@vitest-environment`) are machine instructions, and the
     suppression rules above govern them. Never append a prose reason to one.
   - Rationale, history, ticket links, workarounds, TODOs, and "why" belong in
     the commit message, the PR description, an issue, or an ADR. They never go

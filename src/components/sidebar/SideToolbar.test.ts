@@ -210,7 +210,7 @@ describe('SideToolbar', () => {
       const itemHeight = 50
       const clientHeight = vi
         .spyOn(HTMLElement.prototype, 'clientHeight', 'get')
-        .mockReturnValue(320)
+        .mockReturnValue(280)
       const scrollHeight = vi
         .spyOn(HTMLElement.prototype, 'scrollHeight', 'get')
         .mockImplementation(function (this: HTMLElement) {

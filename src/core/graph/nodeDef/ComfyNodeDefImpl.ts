@@ -78,6 +78,8 @@ export class ComfyNodeDefImpl
   readonly search_aliases?: string[]
   /** Category for the Essentials tab. If set, the node appears in Essentials. */
   readonly essentials_category?: string
+  readonly group?: string
+  readonly tags: string[]
   /** Whether the blueprint is a global/installed blueprint (not user-created). */
   readonly isGlobal?: boolean
   readonly isCoreNode: boolean
@@ -169,6 +171,8 @@ export class ComfyNodeDefImpl
     this.price_badge = obj.price_badge
     this.essentials_category =
       NODE_TO_ESSENTIALS_CATEGORY[obj.name] ?? obj.essentials_category
+    this.group = obj.group
+    this.tags = obj.tags ?? []
     this.isGlobal = obj.isGlobal
     this.isCoreNode = CORE_NODE_MODULES.includes(
       this.python_module.split('.')[0]

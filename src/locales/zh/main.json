@@ -5072,6 +5072,7 @@
       },
       "noBookmarkedNodes": "暂无收藏",
       "noMatchingNodes": "没有与“{query}”匹配的节点",
+      "other": "其他",
       "resetView": "重置视图为默认",
       "sections": {
         "bookmarked": "已收藏",

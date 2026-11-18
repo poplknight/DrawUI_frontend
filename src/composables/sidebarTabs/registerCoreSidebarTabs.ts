@@ -1,8 +1,6 @@
 import { watch } from 'vue'
 
-import { useAssetsSidebarTab } from '@/composables/sidebarTabs/useAssetsSidebarTab'
 import { useJobHistorySidebarTab } from '@/composables/sidebarTabs/useJobHistorySidebarTab'
-import { useModelLibrarySidebarTab } from '@/composables/sidebarTabs/useModelLibrarySidebarTab'
 import { useNodeLibrarySidebarTab } from '@/composables/sidebarTabs/useNodeLibrarySidebarTab'
 import { useSettingStore } from '@/platform/settings/settingStore'
 import { useAppsSidebarTab } from '@/platform/workflow/management/composables/useAppsSidebarTab'
@@ -33,9 +31,7 @@ export function registerCoreSidebarTabs() {
     (enabled) => syncJobHistoryTab(enabled)
   )
 
-  sidebarTabStore.registerSidebarTab(useAssetsSidebarTab())
   sidebarTabStore.registerSidebarTab(useNodeLibrarySidebarTab())
-  sidebarTabStore.registerSidebarTab(useModelLibrarySidebarTab())
   sidebarTabStore.registerSidebarTab(useWorkflowsSidebarTab())
   sidebarTabStore.registerSidebarTab(useAppsSidebarTab())
 

@@ -1,0 +1,10 @@
+---
+description: 开工前先读 DrawUI/.ai_plans/v0.0.0.md
+alwaysApply: true
+---
+
+# 先读交接文档
+
+处理 DrawUI 或 DrawUI_frontend 的任何任务之前，先读 `/Users/tal/coding/cursor/DrawUI/.ai_plans/v0.0.0.md`（简称 v0）。读完再打开其他文件或改代码。
+
+v0 是 AI 入口。目标、保留范围、删除范围、两个 fork 的仓库事实都写在那里。`.ai_plans/` 里若有更新的计划，以 v0 顶部指向的那份为准。

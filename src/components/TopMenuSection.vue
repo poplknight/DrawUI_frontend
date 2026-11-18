@@ -66,15 +66,6 @@
                 :queue-overlay-expanded="isQueueOverlayExpanded"
                 @update:progress-target="updateProgressTarget"
               />
-              <CurrentUserButton
-                v-if="
-                  isLoggedIn &&
-                  !isIntegratedTabBar &&
-                  !flags.billingNewUxEnabled
-                "
-                class="shrink-0"
-              />
-              <LoginButton v-else-if="!isLoggedIn && !isIntegratedTabBar" />
               <Button
                 v-if="managerState.shouldShowExtensionsButton.value"
                 :tooltip="t('menu.manageExtensions')"
@@ -90,9 +81,8 @@
                   class="absolute top-0.5 right-1 size-2 rounded-full bg-destructive"
                 />
               </Button>
-              <CloudButton v-if="isCloudButtonShown" />
               <Button
-                v-else-if="isDeployButtonShown"
+                v-if="isDeployButtonShown"
                 :tooltip="t('deployToComfyApi.buttonLabel')"
                 tooltip-side="bottom"
                 variant="secondary"
@@ -201,11 +191,8 @@ import { useViewErrorsInGraph } from '@/composables/useViewErrorsInGraph'
 import { AskAgentPortKey } from '@/platform/workflowErrors/askAgentPort'
 import { useAskAgentAboutIssues } from '@/workbench/extensions/agent/composables/agent/useAskAgentAboutIssues'
 import ActionBarButtons from '@/components/topbar/ActionBarButtons.vue'
-import CurrentUserButton from '@/components/topbar/CurrentUserButton.vue'
-import LoginButton from '@/components/topbar/LoginButton.vue'
 import Badge from '@comfyorg/design-system/badge/Badge'
 import Button from '@comfyorg/design-system/button/Button'
-import { useCurrentUser } from '@/composables/auth/useCurrentUser'
 import { useQueueFeatureFlags } from '@/composables/queue/useQueueFeatureFlags'
 import { useErrorHandling } from '@/composables/useErrorHandling'
 import { useFeatureFlags } from '@/composables/useFeatureFlags'
@@ -224,8 +211,6 @@ import { useQueueUIStore } from '@/stores/queueStore'
 import { usePropertiesPanelStore } from '@/renderer/extensions/propertiesPanel/propertiesPanelStore'
 import { useWorkspaceStore } from '@/stores/workspaceStore'
 import { isCloud } from '@/platform/distribution/types'
-import CloudButton from '@/components/CloudButton.vue'
-import { canHandOffToCloud } from '@/platform/openOnCloud/localHandoffProtocol'
 import { openDeployToComfyApiDialog } from '@/platform/workflow/deploy/composables/lazyDeployToComfyApiDialog'
 import {
   openShareDialog,
@@ -246,13 +231,9 @@ const isActionBarsHidden = computed(() => canvasStore.isPickingNodes)
 const managerState = useManagerState()
 const managerSurveyDialog = useManagerSurveyDialog()
 const deploymentPickStore = useDeploymentPickStore()
-const { isLoggedIn } = useCurrentUser()
 const { t } = useI18n()
 const { toastErrorHandler } = useErrorHandling()
 const { flags } = useFeatureFlags()
-const isCloudButtonShown = computed(
-  () => !isCloud && flags.openOnCloudEnabled && canHandOffToCloud()
-)
 const isDeployButtonShown = computed(() => flags.deployToCloud)
 function openDeployInstallationDialog() {
   useTelemetry()?.trackUiButtonClicked({
@@ -284,7 +265,7 @@ const hasDockedButtons = computed(() => {
   if (hasLegacyContent.value) return true
   if (!isIntegratedTabBar.value) return true
   if (managerState.shouldShowExtensionsButton.value) return true
-  if (isCloudButtonShown.value || isDeployButtonShown.value) return true
+  if (isDeployButtonShown.value) return true
   if (isCloud) return true
   if (!isPropertiesPanelOpen.value) return true
   return false
